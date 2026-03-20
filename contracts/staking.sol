@@ -30,19 +30,6 @@ interface IAave {
         address to
     ) external returns (uint256);
 
-    function getReserveData(address asset) external view returns (
-        address aTokenAddress,
-        address stableDebtTokenAddress,
-        address variableDebtTokenAddress,
-        uint256 liquidityRate,
-        uint256 variableBorrowRate,
-        uint256 stableBorrowRate,
-        uint256 averageStableBorrowRate,
-        uint256 lastUpdateTimestamp,
-        uint40 liabilitiesData,
-        uint40 lastLiquidityCumulativeIndex
-    );
-
     function getReserveAToken(address asset) external view returns (address);
 }
 
@@ -68,18 +55,14 @@ contract BBSStaking {
     event Deposited(address indexed user, uint256 stakingId, uint256 amount);
     event Withdrawn(address indexed user, uint256 stakingId, uint256 amount);
     event MinDepositUpdated(uint256 newMinDeposit);
+    event OwnerChanged(address indexed oldOwner, address indexed newOwner);
+    event WithdrawProfit(address indexed owner, uint256 profit);
 
 
     constructor(address _erc20, address _aave) {
         erc20 = _erc20;
         aave = _aave;
         owner = msg.sender;
-    }
-
-    function setMinDeposit(uint256 _amount) external {
-        require(msg.sender == owner, "Only owner");
-        minDeposit = _amount;
-        emit MinDepositUpdated(_amount);
     }
 
     function deposit(uint256 amount) external {
@@ -131,7 +114,14 @@ contract BBSStaking {
 
     function setOwner(address _newOwner) external {
         require(msg.sender == owner, "Only owner");
+        emit OwnerChanged(owner, _newOwner);
         owner = _newOwner;
+    }
+
+    function setMinDeposit(uint256 _amount) external {
+        require(msg.sender == owner, "Only owner");
+        minDeposit = _amount;
+        emit MinDepositUpdated(_amount);
     }
 
     function withdrawProfit() external {
@@ -141,5 +131,6 @@ contract BBSStaking {
         uint256 profit = aaveBalance > totalStaked ? aaveBalance - totalStaked : 0;
         require(profit > 0, "No profit to withdraw");
         require(IERC20(aTokenAddress).transfer(owner, profit), "Transfer failed");
+        emit WithdrawProfit(owner, profit);
     }
 }
